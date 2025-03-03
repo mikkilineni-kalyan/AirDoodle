@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirDoodle - Draw with Hand Gestures</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- MediaPipe Hands library -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <!-- MediaPipe Drawing Utilities -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <!-- MediaPipe Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <header>
+        <h1>AirDoodle</h1>
+        <p>Draw in the air using your hand!</p>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="video-container">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="output-canvas"></canvas>
+            </div>
+            <div class="canvas-container">
+                <canvas id="drawing-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="color-picker">
+                <button class="color-btn active" data-color="#000000" style="background-color: #000000;"></button>
+                <button class="color-btn" data-color="#ff0000" style="background-color: #ff0000;"></button>
+                <button class="color-btn" data-color="#00ff00" style="background-color: #00ff00;"></button>
+                <button class="color-btn" data-color="#0000ff" style="background-color: #0000ff;"></button>
+                <button class="color-btn" data-color="#ffff00" style="background-color: #ffff00;"></button>
+            </div>
+            <div class="tool-picker">
+                <button id="clear-btn">Clear Canvas</button>
+                <button id="save-btn">Save Drawing</button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>AirDoodle - Draw with your hands using your webcam</p>
+        <p>No installation or payment required!</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
