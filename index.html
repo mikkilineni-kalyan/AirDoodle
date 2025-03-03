@@ -19,10 +19,28 @@
     </header>
 
     <main>
+        <div class="tutorial-panel">
+            <h2>How to Use</h2>
+            <div class="tutorial-step">
+                <div class="step-number">1</div>
+                <p>Pinch your thumb and index finger together to start drawing</p>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">2</div>
+                <p>Move your hand while keeping fingers pinched</p>
+            </div>
+            <div class="tutorial-step">
+                <div class="step-number">3</div>
+                <p>Release the pinch to stop drawing</p>
+            </div>
+            <button id="tutorial-toggle">Hide Tutorial</button>
+        </div>
+
         <div class="container">
             <div class="video-container">
                 <video id="webcam" autoplay playsinline></video>
                 <canvas id="output-canvas"></canvas>
+                <div id="drawing-status">Not Drawing</div>
             </div>
             <div class="canvas-container">
                 <canvas id="drawing-canvas"></canvas>
@@ -40,7 +58,23 @@
             <div class="tool-picker">
                 <button id="clear-btn">Clear Canvas</button>
                 <button id="save-btn">Save Drawing</button>
+                <button id="sensitivity-btn">Adjust Sensitivity</button>
             </div>
+        </div>
+
+        <div id="sensitivity-panel" class="hidden">
+            <h3>Drawing Sensitivity</h3>
+            <div class="slider-container">
+                <label for="pinch-threshold">Pinch Sensitivity:</label>
+                <input type="range" id="pinch-threshold" min="1" max="15" value="8">
+                <span id="pinch-value">0.08</span>
+            </div>
+            <div class="slider-container">
+                <label for="smoothing-factor">Smoothing Amount:</label>
+                <input type="range" id="smoothing-factor" min="1" max="15" value="5">
+                <span id="smoothing-value">5</span>
+            </div>
+            <button id="sensitivity-close">Close</button>
         </div>
     </main>
 
