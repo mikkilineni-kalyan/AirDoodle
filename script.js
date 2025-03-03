@@ -15,6 +15,8 @@ const pinchThresholdSlider = document.getElementById('pinch-threshold');
 const pinchValueDisplay = document.getElementById('pinch-value');
 const smoothingFactorSlider = document.getElementById('smoothing-factor');
 const smoothingValueDisplay = document.getElementById('smoothing-value');
+const mirrorToggle = document.getElementById('mirror-toggle');
+const ghostLineToggle = document.getElementById('ghost-line-toggle');
 
 // Canvas setup
 const canvasCtx = canvasElement.getContext('2d');
@@ -29,6 +31,12 @@ let lastY = 0;
 let positionHistory = [];
 let SMOOTHING_FACTOR = 5; // Number of positions to average
 let PINCH_THRESHOLD = 0.08; // Threshold for pinch detection
+let isMirrored = false; // Mirror mode state
+let showGhostLine = true; // Ghost line mode state
+let lastDrawingPoint = null; // Store the last point where drawing ended
+let ghostLineOpacity = 0.3; // Initial opacity for ghost line
+let ghostLineTimeout = null; // Timeout for fading out ghost line
+let ghostLineFadeDelay = 3000; // Delay before starting to fade out ghost line (ms)
 
 // Set the canvas dimensions to match its container
 function resizeCanvas() {
@@ -59,14 +67,87 @@ hands.setOptions({
 });
 
 // Helper function to draw a line
-function drawLine(x1, y1, x2, y2) {
+function drawLine(x1, y1, x2, y2, color = currentColor, width = 4, dash = []) {
     drawingCtx.beginPath();
-    drawingCtx.strokeStyle = currentColor;
-    drawingCtx.lineWidth = 4;
+    drawingCtx.strokeStyle = color;
+    drawingCtx.lineWidth = width;
     drawingCtx.lineCap = 'round';
+    
+    // Set dash pattern if provided
+    if (dash.length > 0) {
+        drawingCtx.setLineDash(dash);
+    } else {
+        drawingCtx.setLineDash([]);
+    }
+    
     drawingCtx.moveTo(x1, y1);
     drawingCtx.lineTo(x2, y2);
     drawingCtx.stroke();
+}
+
+// Helper function to draw ghost line
+function drawGhostLine(x, y) {
+    if (lastDrawingPoint && showGhostLine && !isDrawing) {
+        // Calculate distance between points
+        const distance = Math.sqrt(
+            Math.pow(lastDrawingPoint.x - x, 2) + 
+            Math.pow(lastDrawingPoint.y - y, 2)
+        );
+        
+        // Only show ghost line if points are within a reasonable distance
+        // This prevents very long lines stretching across the canvas
+        if (distance < drawingCanvas.width / 2) {
+            // Draw a curved, semi-transparent line
+            drawingCtx.save();
+            
+            // Create gradient for the line
+            const gradient = drawingCtx.createLinearGradient(
+                lastDrawingPoint.x, lastDrawingPoint.y, x, y);
+            gradient.addColorStop(0, `rgba(100, 100, 100, ${ghostLineOpacity})`);
+            gradient.addColorStop(1, `rgba(100, 100, 100, ${ghostLineOpacity * 0.5})`);
+            
+            // Draw the line with bezier curve for smoother appearance
+            drawingCtx.beginPath();
+            drawingCtx.strokeStyle = gradient;
+            drawingCtx.lineWidth = 2;
+            drawingCtx.lineCap = 'round';
+            drawingCtx.setLineDash([3, 3]); // Smaller, more elegant dashes
+            
+            // Calculate control points for the curve
+            const ctrlX = (lastDrawingPoint.x + x) / 2;
+            const ctrlY = (lastDrawingPoint.y + y) / 2;
+            
+            drawingCtx.moveTo(lastDrawingPoint.x, lastDrawingPoint.y);
+            drawingCtx.quadraticCurveTo(ctrlX, ctrlY, x, y);
+            drawingCtx.stroke();
+            
+            drawingCtx.restore();
+        }
+    }
+}
+
+// Function to start ghost line fade out
+function startGhostLineFadeOut() {
+    // Clear any existing timeout
+    if (ghostLineTimeout) {
+        clearTimeout(ghostLineTimeout);
+    }
+    
+    // Reset opacity
+    ghostLineOpacity = 0.3;
+    
+    // Set timeout to start fading
+    ghostLineTimeout = setTimeout(() => {
+        // Gradually reduce opacity
+        const fadeInterval = setInterval(() => {
+            ghostLineOpacity -= 0.01;
+            
+            if (ghostLineOpacity <= 0) {
+                clearInterval(fadeInterval);
+                ghostLineOpacity = 0;
+            }
+        }, 50); // Update every 50ms for smooth fade
+    }, ghostLineFadeDelay);
 }
 
 // Add smoothing function
@@ -115,24 +196,60 @@ hands.onResults(results => {
     // Clear the canvas
     canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
     
+    // Save the current state
+    canvasCtx.save();
+    
+    // Apply mirroring if enabled
+    if (isMirrored) {
+        canvasCtx.translate(canvasElement.width, 0);
+        canvasCtx.scale(-1, 1);
+    }
+    
     // Draw camera view
     canvasCtx.drawImage(
         results.image, 0, 0, canvasElement.width, canvasElement.height);
     
+    // Restore the state
+    canvasCtx.restore();
+    
     // Draw hand landmarks
     if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
+            // Save state for hand landmarks drawing
+            canvasCtx.save();
+            
+            // Apply mirroring for landmarks if enabled
+            if (isMirrored) {
+                canvasCtx.translate(canvasElement.width, 0);
+                canvasCtx.scale(-1, 1);
+            }
+            
             drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
                 {color: '#00FF00', lineWidth: 2});
             drawLandmarks(canvasCtx, landmarks, 
                 {color: '#FF0000', lineWidth: 1});
             
+            // Restore state
+            canvasCtx.restore();
+            
             // Use index finger tip for drawing (landmark 8)
             const indexFinger = landmarks[8];
             
             // Map the coordinates from the video to the drawing canvas
-            const x = indexFinger.x * drawingCanvas.width;
-            const y = indexFinger.y * drawingCanvas.height;
+            let x = indexFinger.x;
+            let y = indexFinger.y;
+            
+            // Apply mirroring to coordinates if enabled
+            if (isMirrored) {
+                x = 1 - x;
+            }
+            
+            // Scale to canvas dimensions
+            x = x * drawingCanvas.width;
+            y = y * drawingCanvas.height;
+            
+            // Draw ghost line if not currently drawing
+            drawGhostLine(x, y);
             
             // Detect if thumb and index finger are pinched (for drawing)
             const thumb = landmarks[4];
@@ -164,6 +281,12 @@ hands.onResults(results => {
                 if (isDrawing) {
                     isDrawing = false;
                     updateDrawingStatus(false);
+                    
+                    // Store the last drawing point for ghost line
+                    lastDrawingPoint = { x: lastX, y: lastY };
+                    
+                    // Start the fade-out timer for the ghost line
+                    startGhostLineFadeOut();
                 }
                 // Clear position history when not drawing
                 positionHistory = [];
@@ -175,6 +298,8 @@ hands.onResults(results => {
 // Clear the canvas when clear button is clicked
 clearButton.addEventListener('click', () => {
     drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+    // Reset last drawing point when canvas is cleared
+    lastDrawingPoint = null;
 });
 
 // Save the drawing as an image
@@ -207,6 +332,40 @@ tutorialToggle.addEventListener('click', () => {
     } else {
         tutorialContent.forEach(el => el.style.display = '');
         tutorialToggle.textContent = 'Hide Tutorial';
+    }
+});
+
+// Mirror toggle functionality
+mirrorToggle.addEventListener('click', () => {
+    isMirrored = !isMirrored;
+    
+    // Update button text
+    if (isMirrored) {
+        mirrorToggle.textContent = 'Disable Mirror';
+        mirrorToggle.classList.add('active');
+    } else {
+        mirrorToggle.textContent = 'Enable Mirror';
+        mirrorToggle.classList.remove('active');
+    }
+});
+
+// Ghost line toggle functionality
+ghostLineToggle.addEventListener('click', () => {
+    showGhostLine = !showGhostLine;
+    
+    // Update button text
+    if (showGhostLine) {
+        ghostLineToggle.textContent = 'Hide Guide Line';
+        ghostLineToggle.classList.add('active');
+        
+        // If turning on, reset the opacity and start fade timer
+        if (lastDrawingPoint) {
+            ghostLineOpacity = 0.3;
+            startGhostLineFadeOut();
+        }
+    } else {
+        ghostLineToggle.textContent = 'Show Guide Line';
+        ghostLineToggle.classList.remove('active');
     }
 });
 

@@ -8,6 +8,8 @@ AirDoodle is a free web application that allows users to draw on a digital canva
 - Choose from multiple colors
 - Clear canvas with a click
 - Save your drawings locally
+- Mirror mode for more intuitive drawing
+- Elegant guide line that shows where your next stroke will connect (auto-fades after 3 seconds)
 - Works in any modern browser
 - No server required - runs entirely in your browser
 
@@ -17,9 +19,12 @@ AirDoodle is a free web application that allows users to draw on a digital canva
 2. Pinch your thumb and index finger together to start drawing
 3. Move your hand to draw
 4. Release the pinch to stop drawing
-5. Use the color buttons to change your drawing color
-6. Click "Clear Canvas" to start fresh
-7. Click "Save Drawing" to download your artwork
+5. A subtle curved guide line shows where your next stroke will connect (fades after 3 seconds)
+6. Use the color buttons to change your drawing color
+7. Toggle mirror mode if your movements feel more natural when mirrored
+8. Toggle guide line on/off as needed
+9. Click "Clear Canvas" to start fresh
+10. Click "Save Drawing" to download your artwork
 
 ## Technical Details
 
